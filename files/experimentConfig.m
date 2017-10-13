@@ -1,3 +1,5 @@
+% NOT CURRENTLY IN USE. READ NOTES IN MAIN FILES
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Revision Code: 6w0r0v
