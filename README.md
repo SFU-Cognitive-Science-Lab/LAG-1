@@ -6,11 +6,9 @@ An open source package written in MATLAB
 Version 1.0
 
 Written by Jordan Barnes, Mark Blair, Calen Walshe and Paul Tupper at
-Simon Fraser University,
-Burnaby, Canada. Last updated 2016-08-05.
+Simon Fraser University and University of Texas, CPS.
 
-Copyright (c) 2012-2017 Cognitive Science Lab, SFU
-Published under the Simplified BSD License (see LICENSE_BSD.txt)
+GPL license.
 
 
 ## OVERVIEW
@@ -22,9 +20,6 @@ You can download the latest version of LAG-1 from the git repository at:
 
 https://github.com/SFU-Cognitive-Science-Lab/LAG-1
 
-There you can find further documentation, the latest updates, a wiki, and options
-to follow the project.
-
 
 ## INSTALLATION
 
@@ -34,12 +29,12 @@ LAG-1 requires a Matlab installation, available for Windows, Mac OSX and Linux, 
 
 http://www.mathworks.com/products/compiler/mcr/
 
-LAG-1 has been tested on versions of Matlab dating as far back as 2007.
+LAG-1 as submitted to Psyc Review has been tested on versions of Matlab dating as far back as 2007.
 
 
 ## QUICK START
 
-* Begin by defining a category structure in experimentConfig.txt
+* Begin by defining a category structure in experimentConfig.txt (and in several random spots as experiment specific conditions until cleaned up). 
 
 * Set the desired values of parameter_source.txt
 
@@ -56,6 +51,7 @@ LAG-1 has been tested on versions of Matlab dating as far back as 2007.
 	* 1 = ET3
 	* 2 = SSHRC_IF 
 	* 3 = 5/4
+	* 7 = Simple blocking structure
 
 	[accuracy, category, fixOrder, subjectNumber, Duration, recordSaccStart, recordSaccEnd, endFit, wtHist, accuracyLevels, Responses, ResponseDist] = TwoDSimulator(1)
 
