@@ -50,6 +50,8 @@ function wT = associator1(wT, tau, deltaT, pre_synaptic_neurons, post_synaptic_n
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+ErrorBoost = 10;
+
 postMat=repmat(post_synaptic_neurons,1,length(pre_synaptic_neurons));
 preMat=repmat(pre_synaptic_neurons',length(post_synaptic_neurons),1);
 
@@ -60,7 +62,6 @@ preMat=repmat(pre_synaptic_neurons',length(post_synaptic_neurons),1);
 %                + (learning_rate*(deltaT/tau)) * ...
 %                ( -wT(postI, preI).* preMat(postI,preI) + postMat(postI,preI).*preMat(postI,preI));
             
-% JB fix Oct 6, 2016
   wT(postI, preI) = wT(postI, preI) ... 
                 + (learning_rate*(deltaT/tau)) * ...
                 (postMat(postI,preI).*preMat(postI,preI));
@@ -75,8 +76,8 @@ preMat=repmat(pre_synaptic_neurons',length(post_synaptic_neurons),1);
         % corrective feedbackType on error trials.
         if TrialAccuracy==0 && antiHebbianFlag ==1
            
-            psn1=10*ones(length(post_synaptic_neurons),1);
-            psn1(CategoryToAssociate,1)=-10;
+            psn1=ErrorBoost*ones(length(post_synaptic_neurons),1);
+            psn1(CategoryToAssociate,1)=-ErrorBoost;
             %postI1=post_synaptic_neurons<activation_threshold_postsynaptic;
             postI1=psn1<activation_threshold_postsynaptic; %Jb change Oct 3,2016
                       
