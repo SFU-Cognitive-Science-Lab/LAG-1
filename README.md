@@ -65,5 +65,7 @@ LAG-1 as submitted to Psyc Review has been tested on versions of Matlab dating a
 	[accuracy, category, fixOrder, subjectNumber, Duration, recordSaccStart, recordSaccEnd, endFit, wtHist, accuracyLevels, Responses, ResponseDist] = TwoDSimulator(3,1)
 
 
+## Agenda
 
+Integration with Cosivina based pupil model with reinforcement learning
 
