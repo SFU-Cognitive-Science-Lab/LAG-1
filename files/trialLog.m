@@ -13,9 +13,6 @@ function trialLog(metrics)
 % Brief description:
 %   Simply displays experiment information on a trial by trial basis.
 %
-% Inputs:
-% 
-% metrics (trialLogger) = From LAG-1:
 % 
 % trialLogger(1:19) = [{'Category neurons at decision time'},...
 %     {'Sigmoided Category neurons at decision time'}, {'Feature neurons at decision time'},...
