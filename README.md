@@ -10,7 +10,6 @@ Simon Fraser University and University of Texas, CPS.
 
 GPL license.
 
-
 ## OVERVIEW
 
 LAG-1 is a simple package that can be run from Matlab or compiled and run as a
@@ -29,7 +28,7 @@ LAG-1 requires a Matlab installation, available for Windows, Mac OSX and Linux, 
 
 http://www.mathworks.com/products/compiler/mcr/
 
-LAG-1 as submitted to Psyc Review has been tested on versions of Matlab dating as far back as 2007.
+LAG-1, as first committed, has been tested on versions of Matlab dating as far back as 2007.
 
 
 ## QUICK START
@@ -63,6 +62,8 @@ LAG-1 as submitted to Psyc Review has been tested on versions of Matlab dating a
 	* 4 = unsupervised decoupling of chosen answer with features and coupling of alternative features with alternative categories.
 
 	[accuracy, category, fixOrder, subjectNumber, Duration, recordSaccStart, recordSaccEnd, endFit, wtHist, accuracyLevels, Responses, ResponseDist] = TwoDSimulator(3,1)
+
+## Note: expect 
 
 
 ## Agenda
