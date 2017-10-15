@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
-# LAG-1 - Learning, Attention, and Gaze 1
+# LAG-1 - Learning, Attention, and Gaze 1.0
 A free and open source category learning simulator written in MATLAB
 --------------------------------------------------------------------------------
 
@@ -13,7 +13,7 @@ GPL license.
 ## OVERVIEW
 
 LAG-1 is a simple package that can be run from Matlab or compiled and run as a
-standalone application.
+standalone application. It is so named to highlight the important connections between learning and looking in visual category learning experiments. It is known to exhibit stimulus responsive attention for 1 feature contingency within a category but could likely do more. The code is quite "experimental" so don't be surprised if you need to ask for help with running it out of the box.
 
 You can download the latest version of LAG-1 from the git repository at:
 
