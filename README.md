@@ -1,6 +1,6 @@
 --------------------------------------------------------------------------------
-# LAG-1 - Dynamic attention and category learning simulator
-An open source package written in MATLAB
+# LAG-1 - Learning, Attention, and Gaze 1
+A free and open source category learning simulator written in MATLAB
 --------------------------------------------------------------------------------
 
 Version 1.0
