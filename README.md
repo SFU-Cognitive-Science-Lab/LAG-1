@@ -1,6 +1,8 @@
 --------------------------------------------------------------------------------
 # LAG-1 - Learning, Attention, and Gaze 1.0
-A free and open source category learning simulator written in MATLAB
+A free and open source MATLAB implementation of the integration
+of learning, attention and gaze during category learning, as outlined 
+in the theory called LAG-1 (Barnes, Blair, Walshe & Tupper, submitted).
 --------------------------------------------------------------------------------
 
 Version 1.0
