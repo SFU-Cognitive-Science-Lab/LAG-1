@@ -653,15 +653,15 @@ if structure==5
     Location3Coords = [Location3Centre-(featureSideLength/2) Location3Centre+(featureSideLength/2)]';
     
     %AllLocationCoords = round([Location1Coords Location2Coords Location3Coords]); % indexing into column c gets you feature c
-    AllLocationCoordsLAG-1 = round([Location1Centre;Location2Centre;Location3Centre]); % indexing into column c gets you feature c
+    AllLocationCoordsLAG1 = round([Location1Centre;Location2Centre;Location3Centre]); % indexing into column c gets you feature c
     
     
     %     stimPos_x = round(stimRadius*[ 0, cos(pi/6), -cos(pi/6) ] );
     %     stimPos_y = round(stimRadius*[ 1, -sin(pi/6), -sin(pi/6) ]);
     
     
-    stimPos_x = AllLocationCoordsLAG-1(:,1)';
-    stimPos_y = AllLocationCoordsLAG-1(:,2)';
+    stimPos_x = AllLocationCoordsLAG1(:,1)';
+    stimPos_y = AllLocationCoordsLAG1(:,2)';
     
     
     
@@ -820,11 +820,11 @@ if structure==6
         Location2Centre = [13 0];
         Location2Coords = [Location2Centre-(featureSideLength/2) Location2Centre+(featureSideLength/2)]';
 
-        AllLocationCoordsLAG-1 = round([Location1Centre;Location2Centre]); % indexing into column c gets you feature c
+        AllLocationCoordsLAG1 = round([Location1Centre;Location2Centre]); % indexing into column c gets you feature c
 
 
-        stimPos_x = AllLocationCoordsLAG-1(:,1)';
-        stimPos_y = AllLocationCoordsLAG-1(:,2)';
+        stimPos_x = AllLocationCoordsLAG1(:,1)';
+        stimPos_y = AllLocationCoordsLAG1(:,2)';
 
     end
     
