@@ -68,7 +68,7 @@ if ~isempty(varargin)
         structure = varargin{1}; %Calling model from another script
     end
 else
-    structure =1; %1=5to1,3=5/4
+    structure =1; %1=5to1, 3=5/4, 9=visual search
 end
 %
 %   Set the learning feedbackType:
@@ -88,10 +88,17 @@ SMfilename = 'AV14.mat'; % ArtView image #14 used in Psyc Review 2018 submission
 mapScale = 0.5; % Embeds the salience map into the Visual Field, where 0.5 is the same scale as category learning simulations.
 
 % Visual search settings
-MultipleFeatureLocations =0;
+MultipleFeatureLocations =0; % Set to 1 for visual search
 numDistractors = 6; %
 genSearchArray =0;
+VisualSearchTargetGain = [0 0 0 0; 0 0 0 0.2]; % Assuming structure 9, two feature dimensions
+searchBoost = 1.2 % Optional boost for everything on the Visual Field during visual search
 arrayPerturbations = [-2 10];
+targetPerturb = [5 17];
+VisualSearchTargetThreshold = 0.9
+
+
+
 
 %% 2. Model components
 % field_v - retinal field, space times feature, high resolution
@@ -125,6 +132,7 @@ visualHalfSize = (visualFieldSize-1)/2;  % ditto
 targetSize = 25*gridRefinement;  %stimulus width
 badTimestepNum = 5000; % If it's this long model will abort.
 badFixationNum = 30; % Max fixation count before fail.
+
 
 %This is for testing purposes.
 %rng(1);
@@ -195,10 +203,9 @@ totalLocations = locationNum + 1;
 stimPos_x = [stimPos_x -18]; %Appending the fb locations
 stimPos_y = [stimPos_y 20];
 
-%Attention field
+% Spatial Attention Field
 
 spatialFBposition = [-18 20];
-
 fbButtonSize = 32*gridRefinement;
 
 
@@ -418,6 +425,7 @@ c_xfbButton_changes = 1;
 
 % Miscellaneous model parameters
 temperature=0.07; %otherwise known as gamma. This sets how deterministic the model's responses should be.
+softmaxSacc = 0; % use temperature1 if softmaxSacc=1
 temperature1=0.14; %visual search and salience map temperature level for SMF
 decay_rate = 5; %higher decay constant here actually means lower decay (denominator)
 antiHebbRate = 3;
@@ -517,6 +525,7 @@ neuron_click = h_click_107;
 neuron_imp = h_imp_122;
 input_v = zeros(visualFieldSize,visualFieldSize,visualLayers); %+1 for the clear added things
 input_a = zeros(spatialFieldSize, spatialFieldSize);
+
 activation_threshold_features = h_f_80+1;
 activation_threshold_category = 0;
 ior_input = zeros(spatialFieldSize,spatialFieldSize);
@@ -749,8 +758,8 @@ if visualize || startVisualize
     set(hAllAxes(find(cellfun(@(x) strcmp(x.String,'Gain'),get(hAllAxes,'Title')))),'YLim',[1 featureNum]);
     set(hAllAxes(find(cellfun(@(x) strcmp(x.String,'Weight Matrix'),get(hAllAxes,'Title')))),'YLim',[1 featureNum],'XLim',[1 catNum]);
     set(hAllAxes(find(cellfun(@(x) strcmp(x.String,'Category Neurons'),get(hAllAxes,'Title')))),'YLim',[0.5 catNum+0.5]);
-        
-    %set(F3_circle, 'MarkerFaceColor', [1 1 1], 'MarkerEdgeColor', [1 1 1], 'MarkerSize', 10);hold on
+    
+    set(F3_circle, 'MarkerFaceColor', [1 1 1], 'MarkerEdgeColor', [1 1 1], 'MarkerSize', 10);hold on
     
     
     
@@ -897,9 +906,9 @@ while state ~= QUIT
             
             
             %% Making the stimuli appear on the visual field
-            for i = 1 : totalLocations
+            for i = 1:totalLocations
                 
-                
+                spatialInput = 0;
                 if i < totalLocations
                     
                     %Input to the visual field.
@@ -909,25 +918,53 @@ while state ~= QUIT
                     % plot transpose to make it look right, because matlab plots
                     % first coordinate as vertical. This is why YY and XX are
                     % reversed to what you'd expect in the above line.
-                    RR=sqrt( (stimPos_x(i)-XX).^2 + (stimPos_y(i)-YY).^2); % distances from feature
-                    spatialInput=(RR<stimSize_v(i)/2); %Puts a 1 on the field wherever a feature is
+                    
+                    if MultipleFeatureLocations % Used in visual search
+                        
+                        if i<(totalLocations-1) %distractor layers
+                            if genSearchArray
+                                for k = 1:numDistractors
+                                    RR=sqrt(((randi(arrayPerturbations)+stimPos_x(i))-XX).^2 + (randi(arrayPerturbations)+stimPos_y(i)-YY).^2); % distances from feature
+                                    spatialInput=imrotate(spatialInput + (RR<(stimSize_v(i)/2)),57,'bilinear','crop'); %Puts a 1 on the field wherever a feature is
+                                end
+                            else
+                                spatialInput = ~im2bw(imresize(imread('binaries/VisualSearch_distractors.jpg'),[spatialFieldSize spatialFieldSize]));
+                            end
+                        else %target layer
+                            if genSearchArray
+                                RR=sqrt( ((targetPerturb(1)+stimPos_x(i))-XX).^2 + ((targetPerturb(2)+stimPos_y(i))-YY).^2); % distances from feature
+                                spatialInput=(RR<(stimSize_v(i)/2)); %Puts a 1 on the field wherever a feature is
+                            else
+                                spatialInput = ~im2bw(imresize(imread('binaries/VisualSearch_target.jpg'),[spatialFieldSize spatialFieldSize]));
+                            end
+                        end
+                        spatialInput = searchBoost*spatialInput; 
+                    else
+                        RR=sqrt( (stimPos_x(i)-XX).^2 + (stimPos_y(i)-YY).^2); % distances from feature
+                        spatialInput=spatialInput + (RR<(stimSize_v(i)/2)); %Puts a 1 on the field wherever a feature is
+                    end
                     
                     if stimFeature_v(i) ~= -1
-                        stimuli_v(:, :, stimFeature_v(i)) = spatialInput; %Associates the feature existence matrix with the right feature value in the 3rd dimension of the visual field.     
+                        stimuli_v(:, :, stimFeature_v(i)) = spatialInput; %Associates the feature existence matrix with the right feature value in the 3rd dimension of the visual field.
                     end
+                    
+                    
                     stimWeights_v(stimTimes_v(i, 1):stimTimes_v(i, 2), i) = 1;
-                    featureColours = []; 
+                    featureColours = [];
+                    
+                    
+                    
                     %This will create a 3 x n matrix with n being the number of features and 3 being the components of R-G-B
                     
                     for k = 1:locationNum %3 being the components of RGB. 3 rows X featureNum columns
-
+                        
                         if sceneStimColors(k)==-1
                             featureColours = [featureColours [0;0;0]];
                         else
                             featureColours = [featureColours [[sceneColors(1, sceneStimColors(k), 1)];[sceneColors(1, sceneStimColors(k), 2)];[sceneColors(1, sceneStimColors(k), 3)]]];
                             
                         end
-
+                        
                     end
                     
                     %Keeps these stims active for the prespecified max trial time.
@@ -1226,8 +1263,12 @@ while state ~= QUIT
                 saccadeInProgress = true;
                 kernel_av = 0 * gaussNorm2d(kSize_av,sigma_av_2_46); %kill input from the visual field into the attention field.
                 
+                if softmaxSacc
+                    ind=randsample(length(output_s(:)),1, 'true', softermax(output_s(:),temperature1));
+                else
+                    [max_output_s,ind]=max(output_s(:)); %find the the largest peak on the saccade field.
+                end
                 
-                [max_output_s,ind]=max(output_s(:)); %find the the largest peak on the saccade field.
                 [target_gaze_shift1,target_gaze_shift2] =ind2sub(size(output_s),ind); % find the location of of that maximum
                 ior1 = spatialFieldFovea(1); %Set the IOR location to the extant coordinates of the fovea.
                 ior2 = spatialFieldFovea(2); %ditto for Y
@@ -1330,9 +1371,15 @@ while state ~= QUIT
                 
                 %% This should never be entered. There has been a saccade off screen.
                 
-                if (slidingVisX(1) < 1) || (slidingVisX(spatialFieldSize) > visualFieldSize) || (slidingVisY(1) < 1) || (slidingVisY(spatialFieldSize) > visualFieldSize)
-                    subjectNumber=NaN; endFit=NaN;
-                    error('There has been a saccade off screen.')
+                if (slidingVisX(1) < 1) || (slidingVisX(end) > visualFieldSize) || (slidingVisY(1) < 1) || (slidingVisY(end) > visualFieldSize)
+                    
+                    coordCutoff = [slidingVisX>1 & slidingVisX<visualFieldSize & slidingVisY>1 & slidingVisY<visualFieldSize];
+                    slidingVisX = slidingVisX(coordCutoff);
+                    slidingVisY = slidingVisY(coordCutoff);
+                    if isempty(slidingVisX)
+                        subjectNumber=NaN; endFit=NaN;
+                        error('There has been a saccade off screen.')
+                    end
                 end
                 
                 %%
@@ -1504,20 +1551,36 @@ while state ~= QUIT
                         diffMatrix = [1 0 0 0;0 0 -1 0;0 1 0 0;0 0 0 -1];
                         valuesPerLocation = 1;
                         kronMultiple = ones(1,valuesPerLocation);
+                    elseif ismember(structure, [8])
+                        diffMatrix = [1 0;-1 0;0 1;0 -1];
+                        valuesPerLocation = 2;
+                        kronMultiple = ones(1,valuesPerLocation);
+                        
+                    elseif ismember(structure, [9])
+                        diffMatrix = [0 0;0 0;0 0;0 0];
+                        valuesPerLocation = 2;
+                        kronMultiple = ones(1,valuesPerLocation);
+                        featureValue = VisualSearchTargetGain;
                     end
                     
-                    featureValue = kron(output_c'*abs(output_wT*diffMatrix),kronMultiple);
                     
-                    input_cf = c_cf * (c_cgain_8_105*(kron(abs(output_wT*diffMatrix),kronMultiple)) + output_wT) * (output_f);
-                    
+                    if ~ismember(structure, [9])
+                        featureValue = kron(output_c'*abs(output_wT*diffMatrix),kronMultiple);
+                        input_cf = c_cf * (c_cgain_8_105*(kron(abs(output_wT*diffMatrix),kronMultiple)) + output_wT) * (output_f);
+
+                    else
+                        input_cf = c_cf * (c_cgain_8_105*(featureValue) + output_wT) * (output_f);
+                        
+                    end
                     input_prefs = output_wT' * output_c;
+                    featureValue = kron(output_c'*abs(output_wT*diffMatrix),kronMultiple);
                     input_prefs = input_prefs + c_prefgain_9_105*featureValue';  % why were there two 105s?
                     
                     
                 else % feature values are not tied to location.
-                    input_cf = c_cf * (output_wT) * (output_f); 
+                    input_cf = c_cf * (output_wT) * (output_f);
                     input_prefs = output_wT' * output_c; %NO GAIN.
-
+                    
                     
                 end
                 
@@ -1581,8 +1644,10 @@ while state ~= QUIT
             
             input_rr = c_rr_6_79 * output_r;
             input_av = conv2( sum(output_v(slidingVisX,slidingVisY,:), 3),kernel_av, 'same');
+            input_av = resizem(input_av,[spatialFieldSize spatialFieldSize]);
             input_va = zeros(visualFieldSize,visualFieldSize,visualLayers);
-            input_va(slidingVisX,slidingVisY,:) = repmat(conv2( output_a,kernel_va, 'same'), [1, 1, visualLayers]) - c_va_gi_1_12 * sum(output_a(:));
+            full_in_va = repmat(conv2( output_a,kernel_va, 'same'), [1, 1, visualLayers]) - c_va_gi_1_12 * sum(output_a(:));
+            input_va(slidingVisX,slidingVisY,:) = full_in_va(1:length(slidingVisX),1:length(slidingVisY),:);
             input_sa = conv2( output_a_fovSup, kernel_sa, 'same') - c_sa_gi_4 * sum(output_a(:));
             input_as = conv2(output_s, kernel_as, 'same');
             input_rg = c_rg_6_77 * output_g;
@@ -1881,7 +1946,7 @@ while state ~= QUIT
             end
             
             %If the end of the trial is detected...
-            if trialTimeStep == tMax
+            if trialTimeStep == tMax || (MultipleFeatureLocations && (output_c(2) > VisualSearchTargetThreshold))
                 
                 trialFixationsTemp = trialFixations;
                 trialFixationsTemp(trialFixations==1)=LocationRelevance.one;
@@ -1929,9 +1994,12 @@ while state ~= QUIT
                 if logging
                     if locationNum ==3
                         TrialLvl = [subjectNumber trialNum binaryFeatureValues(LocationRelevance.one) binaryFeatureValues(LocationRelevance.two)	binaryFeatureValues(LocationRelevance.three) CorrectResponse{end} Response	TrialAccuracy	StimulusRT	FeedbackRT	1	FixationOnset	StimulusOnset	ColourOnset	fixCrossInd	fixCrossInd	FeedbackOnset];
-                    elseif locationNum ==4   
+                    elseif locationNum ==4
                         TrialLvl = [subjectNumber trialNum binaryFeatureValues(LocationRelevance.one) binaryFeatureValues(LocationRelevance.two)	binaryFeatureValues(LocationRelevance.three) binaryFeatureValues(LocationRelevance.four) CorrectResponse{end} Response	TrialAccuracy	StimulusRT	FeedbackRT	1	FixationOnset	StimulusOnset	ColourOnset	fixCrossInd	fixCrossInd	FeedbackOnset];
-                                                
+                        
+                    else
+                        TrialLvl = [subjectNumber trialNum	StimulusRT	FeedbackRT	1	FixationOnset	StimulusOnset	ColourOnset	fixCrossInd	fixCrossInd	FeedbackOnset];
+                        
                     end
                     dlmwrite(['./dft' expName 'TrialLvl-' num2str(subjectNumber) '.txt'], TrialLvl,'delimiter', '\t', 'precision','%.0f', '-append');
                 end
