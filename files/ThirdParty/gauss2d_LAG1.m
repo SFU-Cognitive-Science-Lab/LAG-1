@@ -1,4 +1,4 @@
-function G = gauss2d_LAG-1(half_range, sigma, varargin)
+function G = gauss2d_LAG1(half_range, sigma, varargin)
   
     half_range_x = half_range;
     half_range_y = half_range;

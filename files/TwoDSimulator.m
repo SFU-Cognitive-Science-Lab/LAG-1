@@ -82,6 +82,17 @@ else
     feedbackType = 1;
 end
 
+% Salience map settings
+SalienceMap = 0;
+SMfilename = 'AV14.mat'; % ArtView image #14 used in Psyc Review 2018 submission
+mapScale = 0.5; % Embeds the salience map into the Visual Field, where 0.5 is the same scale as category learning simulations.
+
+% Visual search settings
+MultipleFeatureLocations =0;
+numDistractors = 6; %
+genSearchArray =0;
+arrayPerturbations = [-2 10];
+
 %% 2. Model components
 % field_v - retinal field, space times feature, high resolution
 % field_a - spatial attention field
@@ -184,7 +195,7 @@ totalLocations = locationNum + 1;
 stimPos_x = [stimPos_x -18]; %Appending the fb locations
 stimPos_y = [stimPos_y 20];
 
-%Attention field 
+%Attention field
 
 spatialFBposition = [-18 20];
 
@@ -398,8 +409,8 @@ c_clickx_10_115 = -1.2;
 
 % Impatience parameters
 c_impTimer_11_123 = 0.001;
-fixation_impatience_exponent = 1.7% 1.6;
-trial_impatience_exponent = 1.75% 1.65;
+fixation_impatience_exponent = 1.8% 1.6;
+trial_impatience_exponent = 1.65% 1.65;
 
 % Feedback dynamics
 c_xfbButton_changes = 1;
@@ -407,6 +418,7 @@ c_xfbButton_changes = 1;
 
 % Miscellaneous model parameters
 temperature=0.07; %otherwise known as gamma. This sets how deterministic the model's responses should be.
+temperature1=0.14; %visual search and salience map temperature level for SMF
 decay_rate = 5; %higher decay constant here actually means lower decay (denominator)
 antiHebbRate = 3;
 CategoryChoiceThreshold = 0.8;
@@ -605,6 +617,27 @@ kernel_q_spatial = gaussNorm2d(kSize_q_spatial, sigma_q_spatial_17);
 
 
 
+
+%% Stimulus background/salience map
+
+if SalienceMap
+    salMapsAll = load(SMfilename); salMapsAll.salMap.data = fliplr(salMapsAll.salMap.data');
+    syms x; scaleFactor = double(solve(mapScale == (size(salMapsAll.salMap.data,1)*x)/visualFieldSize,x));
+    [input_sm_resized,R] = resizem(salMapsAll.salMap.data,scaleFactor);
+    input_vsm_shifted = zeros(visualFieldSize,visualFieldSize,visualLayers);
+    input_vsm_empty = zeros(visualFieldSize,visualFieldSize,visualLayers);
+    input_sm_halfV = zeros(spatialFieldSize,spatialFieldSize);
+    input_sm=insertMatrix(input_sm_halfV,input_sm_resized);
+    input_vsm = c_vinp_1_2*repmat(input_sm,1,1,visualLayers);
+end
+
+
+
+
+
+
+
+
 if length(varargin)>2
     
     for i=1:length(varargin{3})
@@ -666,7 +699,7 @@ if visualize || startVisualize
     FB_Exp_Axis = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
         'FB  Expectation'),get(hAllAxes,'Title')))).Children;
     FB_Det_Axis = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
-        'FB detection'),get(hAllAxes,'Title')))).Children;    
+        'FB detection'),get(hAllAxes,'Title')))).Children;
     Category_Neuron_Axis = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
         'Category Neurons'),get(hAllAxes,'Title')))).Children;
     Ft_Exp_Axis = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
@@ -902,7 +935,7 @@ while state ~= QUIT
                 else
                     [YY,XX]=meshgrid(-spatialHalfSize:spatialHalfSize);
                     RR=sqrt((stimPos_x(i)-XX).^2 + (stimPos_y(i)-YY).^2);
-                    spatialInput=(RR<fbButtonSize/2);
+                    spatialInput=(RR<(fbButtonSize/2));
                     stimuli_v(:, :, visualLayers) = spatialInput*c_inp_1;
                     stimWeights_v(stimTimes_v(i, 1):stimTimes_v(i, 2), i) = 1;
                     sceneStimActive(stimTimes_v(i, 1):stimTimes_v(i, 2), i) = 1;
@@ -918,7 +951,10 @@ while state ~= QUIT
             shiftedStimuli_v=zeros(visualFieldSize,visualFieldSize,visualLayers);
             shiftedStimuli_v(slidingVisX,slidingVisY,:)=stimuli_v;
             
-            
+            if SalienceMap
+                input_vsm_shifted = input_vsm_empty;
+                input_vsm_shifted(slidingVisX,slidingVisY,:) = input_vsm;
+            end
             trialTimeStep = 1;
             initTrial = false;
             display('##############################################')
@@ -952,7 +988,7 @@ while state ~= QUIT
             output_x = sigmoid(neuron_x, beta_x_50, inflec_x_51);
             output_g = sigmoid(neuron_g, beta_g_30, inflec_g_31);
             %output_i = sigmoid(neuron_i, beta_i, inflec_i);
-            output_a_fovSup = output_a .* fovSuppression(slidingVisX,slidingVisY);
+            output_a_fovSup = output_a .* resizem(fovSuppression(slidingVisX,slidingVisY),[spatialFieldSize spatialFieldSize]);
             output_wT = sigmoid(wT, beta_wT, inflec_wT);
             output_click = sigmoid(neuron_click, beta_click_116, inflec_click_117);
             output_imp = sigmoid(neuron_imp, beta_imp_120, inflec_imp_121);
@@ -1019,7 +1055,7 @@ while state ~= QUIT
             %% 12. Feedback phase
             if decisionFlag && ~feedbackOff
                 if firstFBTrialFlag == 1 % If this is the first timestep of the feedback
-
+                    
                     %Greedy or softMax?
                     if softMax
                         Response = randsample(catNum,1,'true',softermax(output_c(catIndex(:))',temperature));
@@ -1154,7 +1190,7 @@ while state ~= QUIT
                 %feature values of the experiment. This will be more useful
                 %if we're using a feature field instead of feature neurons.
                 featureDetection_inh = -featureDetection_exc(featureAntiCorrelations(:,3)');
-
+                
                 %input from the visual field to feature neurons is a function
                 %of what has been detected and what logically cannot be,
                 %based on the instructions.
@@ -1306,8 +1342,11 @@ while state ~= QUIT
                 %facilates interactions between attention and visual world.
                 %Without this frame the input to v will be misaligned.
                 shiftedStimuli_v = zeros(visualFieldSize,visualFieldSize,visualLayers);
-                shiftedStimuli_v(slidingVisX,slidingVisY,:) = stimuli_v;
-                
+                shiftedStimuli_v(slidingVisX,slidingVisY,:) = stimuli_v(1:length(slidingVisX),1:length(slidingVisY),:);
+                if SalienceMap
+                    input_vsm_shifted = input_vsm_empty;
+                    input_vsm_shifted(slidingVisX,slidingVisY,:) = input_vsm(1:length(slidingVisX),1:length(slidingVisY),:);
+                end
             end
             %%
             
@@ -1426,7 +1465,7 @@ while state ~= QUIT
             
             % Gained category activations
             if fieldModel
-
+                
                 featureValue(featureNum/2) = 0;
                 for i = 1:2:featureNum
                     featureValue(i) = [sum(repmat(abs(output_wT(:,featureAntiCorrelations(i,1))-output_wT(:,featureAntiCorrelations(i+1,1))),1,2))];
@@ -1499,7 +1538,7 @@ while state ~= QUIT
             end
             
             attPref = conv2(attPrefTotal,kernel_av, 'same');
-            
+            attPref = resizem(attPref,[spatialFieldSize spatialFieldSize]);
             
             %We can see activation of the feature hypothesis neurons get
             %converted to a field in the next few lines. f
@@ -1533,7 +1572,7 @@ while state ~= QUIT
             input_vv = c_vv_exc_1_6 * input_vv_exc - c_vv_inh_1_8 * input_vv_inh;
             
             input_aFBbutton = c_afbButton_2_25 * c_aFBnovelty* output_fbButtonExp * output_a(spatialFBposition(1)+spatialHalfSize,spatialFBposition(2)+spatialHalfSize)' * gauss2d_LAG1([spatialHalfSize spatialHalfSize],sigma_av_2_46,spatialHalfSize,spatialHalfSize,spatialFBposition(1),spatialFBposition(2))';
-
+            
             
             
             input_aa = conv2( output_a,kernel_aa, 'same') - c_aa_gi_2_38 * sum(output_a(:));% - input_aFBbutton_inh';
@@ -1676,9 +1715,14 @@ while state ~= QUIT
             %
             % https://www.mathworks.com/matlabcentral/answers/161540-how-can-i-align-tex-equations-when-using-the-publish-functionality-of-the-matlab-editor
             %
-            field_v = field_v + (deltaT/tau) * (-field_v + h_v_1 + input_v ...
-                + input_vv + input_va + input_vpref);
             
+            if SalienceMap
+                field_v = field_v + (deltaT/tau) * (-field_v + h_v_1 ...
+                    + input_vv + input_va + input_vpref + input_vsm_shifted);
+            else
+                field_v = field_v + (deltaT/tau) * (-field_v + h_v_1 + input_v...
+                    + input_vv + input_va + input_vpref);
+            end
             %% Spatial Attention Field
             % Document reference: \ref{eq:aField}
             % $$\tau \dot {a}(x,y,t) = - a(x,y,t) + {h_{a,18}} + \sum\nolimits_z {c_{19}{ft^{*}_{exp}}(z,t)v^{*}(x,y,z,t)} + c{}_{25}fb{_{\exp }^{*}}(t) + {c_{20}}{x^{*}}(t){\cal G}_A(fix({t_f}),{\sigma _{22}}){I_{sacc}} - {c_{21}}i(x,y,t) - {c_{28}}{g^{*}}(t){\cal G}_A(fix({t_f}),{\sigma _{22}}) - {c_{29}}{r^{*}}(t)a^{*}(x,y,t) + {c_{45}}{I_{sacc}}v_a(x,y,t) + s_a^{*}(x,y,t) + \zeta_{a}(x,y,t) + \int  \int  {w_a}(x - x',y - y',t){a^{*}}(x',y',t)dx'dy' - {c_{38}} {\int \int a^*(x',y',t) dx'dy'} $$
@@ -1730,7 +1774,7 @@ while state ~= QUIT
             TETTime = TETTime +  deltaT ; % Eyetracker timestamp units. Timesteps from start of experiment.
             TETTimeTimeSteps = TETTimeTimeSteps + 1;
             
-
+            
             if noise
                 if fieldModel
                     field_f = field_f + 0* ((sqrt(deltaT)/sqrt(tau))*q_f_95) *randn(featureFieldSize,1);

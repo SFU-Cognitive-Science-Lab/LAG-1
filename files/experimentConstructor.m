@@ -1243,6 +1243,273 @@ if structure==7
 end
 
 
+%% Simple XOR
+
+if structure==8
+    
+    expName = 'simpleXOR';
+    numberOfFitTrials = 160; %10 block cap? check Kruschke2005
+    numFeatureLocations = 2;
+    numFeatures = numFeatureLocations * 2;
+    catNum = 2;
+    numStims = 4;
+    blockNum = 10;
+    stimRadius = 17;
+    newcategory = [];
+    newstim = [];
+    newcolours = [];
+    
+    if fieldModel
+        featureSpacing = 12;
+        categorySpacing = 12;
+        halfSpace = featureSpacing/2;
+    else
+        featureSpacing = 1;
+        categorySpacing = 1;
+        halfSpace = 0;
+    end
+    %%
+
+    Feature1 = [0 0 1 1]';
+    Feature2 = [0 1 0 1]';
+    
+    category = [1 2 2 1]';
+
+    
+    featureFieldSize = numFeatures * featureSpacing; %add 1 for padding
+    colourField = hsv(featureFieldSize);
+    
+    categoryFieldSize = catNum * categorySpacing;
+    
+    
+    stims =[1, 2;
+        1, 3;
+        4, 2;
+        4, 3];
+    
+    
+    
+    if numFeatureLocations == 2
+    stimPos_x = round(stimRadius*[ -cos(pi/4), cos(pi/4)] );
+    stimPos_y = round(stimRadius*[ sin(pi/4) , sin(pi/4)]);
+    
+    else
+    
+        %2 feature location code. Commenting this out for now. July 17, 2017
+    
+        featureSideLength = 3;
+        fixationXY = [0 0];
+
+        Location1Centre = [-13 0]; % contains X & Y of centre
+        Location1Coords = [Location1Centre-(featureSideLength/2) Location1Centre+(featureSideLength/2)]'; % Given the centre, restore the X/Y coordinates for actual screen coords
+
+        Location2Centre = [13 0];
+        Location2Coords = [Location2Centre-(featureSideLength/2) Location2Centre+(featureSideLength/2)]';
+
+        AllLocationCoordsLAG1 = round([Location1Centre;Location2Centre]); % indexing into column c gets you feature c
+
+
+        stimPos_x = AllLocationCoordsLAG1(:,1)';
+        stimPos_y = AllLocationCoordsLAG1(:,2)';
+
+    end
+    
+    for i = 1:blockNum
+        randstim = randperm(size(stims,1));
+        newcategory = [newcategory;category(randstim',:)];
+        newstim = [newstim;stims(randstim', :)];
+        newcolours = [newcolours;stims(randstim', :)];
+    end
+    
+    
+    
+    %This loop gets the appropriate number of colours, equidistant in HSV
+    %space.
+    
+    featureAntiCorrelations =[];
+    for i = 1:numFeatures
+        sceneColours(1,i,1) = colourField((i*featureSpacing)-halfSpace,1);
+        sceneColours(1,i,2) = colourField((i*featureSpacing)-halfSpace,2);
+        sceneColours(1,i,3) = colourField((i*featureSpacing)-halfSpace,3);
+        
+        % There are no feature anti correlations for this structure because
+        % all feature values will appear in all locations with any other
+        % possible feature val...except itself...?
+        featureAntiCorrelations = [featureAntiCorrelations; i (i*featureSpacing)-halfSpace i+(2*mod(i,2))-1 (featureSpacing*(i+(2*mod(i,2))-1))-halfSpace];
+    end
+    
+    
+    catIndex = [];
+    for i = 1:catNum
+        catIndex = [catIndex (i*categorySpacing)-halfSpace];
+    end
+    
+    
+    
+    if fitStruct.fitting == 0
+        funcRels = [1 2];
+        
+    elseif fitStruct.fitting == 1
+        funcRels = randperm(2);
+    else
+        funcRels = [1 2];
+        
+    end
+    
+    newstim = newstim(:,funcRels);
+    newcolours = newcolours(:,funcRels);
+
+    
+    LocationRelevance.one=funcRels(1);
+    LocationRelevance.two=funcRels(2);
+
+    transfer.switch=0;
+end
+
+
+%% Simple visual search
+
+if structure==9
+    
+    expName = 'VisualSearch';
+    numberOfFitTrials = 16; %10 block cap? check Kruschke2005
+    numFeatureLocations = 2;
+    numFeatures = 4;
+    catNum = 2;
+    numStims = 4;
+    blockNum = 2;
+    stimRadius = 17;
+    newcategory = [];
+    newstim = [];
+    newcolours = [];
+    
+    if fieldModel
+        featureSpacing = 12;
+        categorySpacing = 12;
+        halfSpace = featureSpacing/2;
+    else
+        featureSpacing = 1;
+        categorySpacing = 1;
+        halfSpace = 0;
+    end
+    %%
+    
+    featureFieldSize = numFeatures * featureSpacing; %add 1 for padding
+    colourField = hsv(featureFieldSize);
+    
+    categoryFieldSize = catNum * categorySpacing;
+    
+    
+    stims =[1, 4;
+        1, 4;
+        1, 4;
+        1, 4];
+    
+    stimsTransfer =[2, 4, 6, 7;
+        2, 3, 6, 7;
+        2, 3, 6, 8;
+        2, 4, 5, 8;
+        1, 4, 6, 8;
+        2, 4, 5, 7;
+        1, 4, 6, 7;
+        1, 3, 5, 8;
+        1, 3, 5, 7;
+        2, 3, 5, 8;
+        2, 3, 5, 7;
+        2, 4, 6, 8;
+        1, 3, 6, 7;
+        1, 4, 5, 8;
+        1, 3, 6, 8;
+        1, 4, 5, 7;];
+    
+    category = [1;1;1;1]; %F1 = Loc1, F2 = Loc2, F3 = Loc3
+    categoryTransfer = [1;1;1;1;1;2;2;2;2;7;7;7;7;7;7;7];
+    
+    
+    stimPos_x = round(stimRadius*[ -cos(pi/4), cos(pi/4)] );
+    stimPos_y = round(stimRadius*[ sin(pi/4) , -sin(pi/4)]);
+    
+    if fitStruct.fitting == 0
+        newstim = [];
+        newstim(:,fitStruct.funcRels(1)) = fitStruct.stimuli(1:numberOfFitTrials,2)+1;
+        newstim(:,fitStruct.funcRels(2)) = fitStruct.stimuli(1:numberOfFitTrials,3)+3;
+        newcategory =  fitStruct.stimuli(1:numberOfFitTrials,1);
+        newcolours = newstim;
+        LocationRelevance.one=fitStruct.funcRels(1);
+        LocationRelevance.two=fitStruct.funcRels(2);
+
+    else
+        newcategory = [];
+        newstim = [];
+        newcolours = [];
+
+        if fitStruct.fitting == -1
+            funcRels = [1 2];
+        elseif fitStruct.fitting == 1
+            funcRels = randperm(2);
+        end
+        
+        stims = stims(:,funcRels);
+        LocationRelevance.one=funcRels(1);
+        LocationRelevance.two=funcRels(2);
+        
+        for i = 1:blockNum
+            randstim = randperm(numStims);
+            newcategory = [newcategory;category(randstim',:)];
+            newstim = [newstim;stims(randstim', :)];
+            newcolours = [newcolours;stims(randstim', :)];
+        end
+        
+        
+    end
+    
+    transferCategories = [];
+    transferStims = [];
+    transferColours = [];
+    
+    % this loop is similar to the previous one except for using the transfer
+    % stimuli.
+    
+    
+    
+    for i = 1:2
+        transferCategories = [transferCategories;categoryTransfer];
+        transferStims = [transferStims;stimsTransfer];
+        transferColours = [transferColours;stimsTransfer];
+    end
+    
+    stimsTransfer = stimsTransfer(:,funcRels);
+    transferColours = stimsTransfer
+    
+    %still need the transfer stims for fitting.
+    
+    
+    featureAntiCorrelations =[];
+    for i = 1:numFeatures
+        sceneColours(1,i,1) = colourField((i*featureSpacing)-halfSpace,1); % it selects the values of first row and 1-8 columns in the colourField matrix.
+        sceneColours(1,i,2) = colourField((i*featureSpacing)-halfSpace,2);
+        sceneColours(1,i,3) = colourField((i*featureSpacing)-halfSpace,3);
+        featureAntiCorrelations = [featureAntiCorrelations; i (i*featureSpacing)-halfSpace i+(2*mod(i,2))-1 (featureSpacing*(i+(2*mod(i,2))-1))-halfSpace]; % this equation creats a row of numbers that for odd i, it returns (i i i+1 i+1); for even i, it returns (i i i-1 i-1). Then the pattern repeats for through 1 o8 times to creat the featureAntiCorrelations matrix.
+    end
+    
+    
+    catIndex = [];
+    for i = 1:catNum
+        catIndex = [catIndex (i*categorySpacing)-halfSpace];
+    end
+    
+    
+    transfer.categories = transferCategories;
+    transfer.stims = transferStims;
+    transfer.colours = transferColours;
+    transfer.switch = 1;
+end
+
+
+
+
+
+
 featureOptions = {}; %Describes the feature colours used.
 for i = 1:2:numFeatures
     [iscolor clrs] = fuzzycolor(hsv2rgb(squeeze(sceneColours(:,i,:))'));
