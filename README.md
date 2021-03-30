@@ -66,8 +66,7 @@ LAG-1, as first committed, has been tested on versions of Matlab dating as far b
 
 	[accuracy, category, fixOrder, subjectNumber, Duration, recordSaccStart, recordSaccEnd, endFit, wtHist, accuracyLevels, Responses, ResponseDist] = TwoDSimulator(3,1)
 
+## Demonstration videos  
 
-## Agenda
-
-Integration with Cosivina based pupil model with reinforcement learning. (Almost complete. Will take care of a number of obvious shortcomings with the organization of the main functions/scripts).
+https://vault.sfu.ca/index.php/s/lQAIWUoCZhmEYun  
 
