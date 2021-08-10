@@ -596,7 +596,7 @@ if structure==5
         %categoryAlignment = ['A' 'A' 'B' 'B' 'C' 'C' 'D' 'D'];
         
     elseif conditionCode == 2 || conditionCode == 4 %Hard
-        
+        catNum = 8;
         category = [1 2 3 4 5 6 7 8]';
         %categoryAlignment = [{'A1'} {'A2'} {'B1'} {'B2'} {'C1'} {'C2'} {'D1'} {'D2'}];
         
@@ -636,7 +636,7 @@ if structure==5
     end
     
     featureSideLength = 3;
-    fixationXY = [51 51];
+    fixationXY = [51 51] -51;
     referenceAngle = 0;  % This makes reference to location 1. Angle = 0 is horizontally left from fixation, as is 360.
     
     

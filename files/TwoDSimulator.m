@@ -68,7 +68,7 @@ if ~isempty(varargin)
         structure = varargin{1}; %Calling model from another script
     end
 else
-    structure =1; %1=5to1, 3=5/4, 9=visual search
+    structure =5; %1=5to1, 3=5/4, 5=Covert Learning, 9=visual search
 end
 %
 %   Set the learning feedbackType:
@@ -82,21 +82,35 @@ else
     feedbackType = 1;
 end
 
-% Salience map settings
+
+temperature=0.07; %otherwise known as gamma. This sets how deterministic the model's responses should be.
+
+feedbackOff = 0; %Set to 1 for experiment transfer phases, search, or free-viewing, where there's no FB.
+FreeViewing = 0;
+VisualSearch = 0;
 SalienceMap = 0;
-SMfilename = 'AV14.mat'; % ArtView image #14 used in Psyc Review 2018 submission
-mapScale = 0.5; % Embeds the salience map into the Visual Field, where 0.5 is the same scale as category learning simulations.
+
+softmaxSacc = 0; % use temperature1 if softmaxSacc=1
+temperature1=0.147; %visual search and salience map temperature level for SMF
+
+% Salience map settings
+if FreeViewing
+    SMfilename = 'AV14.mat'; % ArtView image #14 used in Psyc Review 2018 submission
+    mapScale = 0.5; % Embeds the salience map into the Visual Field, where 0.5 is the same scale as category learning simulations.
+end
 
 % Visual search settings
-MultipleFeatureLocations =0; % Set to 1 for visual search
-numDistractors = 6; %
-genSearchArray =0;
-VisualSearchTargetGain = [0 0 0 0; 0 0 0 0.2]; % Assuming structure 9, two feature dimensions
-searchBoost = 1.2 % Optional boost for everything on the Visual Field during visual search
-arrayPerturbations = [-2 10];
-targetPerturb = [5 17];
-VisualSearchTargetThreshold = 0.9
 
+if VisualSearch
+    MultipleFeatureLocations =1; % Set to 1 for visual search
+    numDistractors = 6; %
+    genSearchArray =0;
+    CategoryChoiceThreshold = 0.95
+    VisualSearchTargetGain = [0 0 0 0; 0 0 0 0.2]; % Assuming structure 9, two feature dimensions
+    searchBoost = 1.06 %1.2 Optional boost for everything on the Visual Field during visual search
+    arrayPerturbations = [-2 10];
+    targetPerturb = [5 17];
+end
 
 
 
@@ -166,7 +180,7 @@ end
 %Trial level logging
 CorrectResponse = [];
 resultsStimulus = [];
-feedbackOff = 0; %Set to 1 for experiment transfer phases where there's no FB.
+
 trainingCategories = []; %Stores the categories before being wiped by transfer categories.
 recordSaccStart = []; %For quick analyses looking at fixation durations and saccade times.
 recordSaccEnd = []; %For quick analyses looking at fixation durations and saccade times.
@@ -416,17 +430,15 @@ c_clickx_10_115 = -1.2;
 
 % Impatience parameters
 c_impTimer_11_123 = 0.001;
-fixation_impatience_exponent = 1.8% 1.6;
-trial_impatience_exponent = 1.65% 1.65;
+fixation_impatience_exponent = 1.8%
+trial_impatience_exponent = 1.85%
 
 % Feedback dynamics
 c_xfbButton_changes = 1;
 
 
 % Miscellaneous model parameters
-temperature=0.07; %otherwise known as gamma. This sets how deterministic the model's responses should be.
-softmaxSacc = 0; % use temperature1 if softmaxSacc=1
-temperature1=0.14; %visual search and salience map temperature level for SMF
+
 decay_rate = 5; %higher decay constant here actually means lower decay (denominator)
 antiHebbRate = 3;
 CategoryChoiceThreshold = 0.8;
@@ -577,6 +589,13 @@ kernel_vv_inh_s_47pt = gaussNorm2d(kSize_vv_inh_s_47pt, sigma_vv_inh_s_47pt_1_9)
 % connections are activated as a function of the difference between the
 % two.
 
+factorScale = 8;
+sigma_aa_exc_2_35 = sigma_aa_exc_2_35*factorScale;
+sigma_aa_inh_2_37 = sigma_aa_inh_2_37*factorScale;
+c_aa_exc_2_34 = c_aa_exc_2_34*factorScale;
+c_aa_inh_2_36 = c_aa_inh_2_36*factorScale;
+
+
 kSize_aa = min(round(kernelWidthMultiplier * max(sigma_aa_exc_2_35, sigma_aa_inh_2_37)), spatialFieldSize);
 kernel_aa = c_aa_exc_2_34 * gaussNorm2d(kSize_aa, sigma_aa_exc_2_35) ...
     - c_aa_inh_2_36 * gaussNorm2d(kSize_aa, sigma_aa_inh_2_37);
@@ -629,7 +648,7 @@ kernel_q_spatial = gaussNorm2d(kSize_q_spatial, sigma_q_spatial_17);
 
 %% Stimulus background/salience map
 
-if SalienceMap
+if FreeViewing
     salMapsAll = load(SMfilename); salMapsAll.salMap.data = fliplr(salMapsAll.salMap.data');
     syms x; scaleFactor = double(solve(mapScale == (size(salMapsAll.salMap.data,1)*x)/visualFieldSize,x));
     [input_sm_resized,R] = resizem(salMapsAll.salMap.data,scaleFactor);
@@ -682,11 +701,14 @@ neuronHistory = [];
 if visualize || startVisualize
     
     
-    hFig = openfig('LAG1UI.fig');
+    hFig = openfig('LAG1UI2.fig');
     hAllAxes = findobj(gcf,'type','axes')
     
     Visual_Field_Axis = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
         'Visual Field'),get(hAllAxes,'Title')))).Children;
+    
+    caxis(hAllAxes(find(cellfun(@(x) strcmp(x.String,'Visual Field'),get(hAllAxes,'Title')))),[0 0.1]);
+
     Attention_Field_Axis = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
         'Spatial Attention Field'),get(hAllAxes,'Title')))).Children;
     Saccade_Field_Axis = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
@@ -723,12 +745,14 @@ if visualize || startVisualize
         'Screen w/fovea'),get(hAllAxes,'Title')))).Children(1);
     Exp_Time_Axis = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
         'Screen w/fovea'),get(hAllAxes,'Title')))).Children(2);
-    F1_circle = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
+    FoveaAxis = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
         'Screen w/fovea'),get(hAllAxes,'Title')))).Children(3);
-    F2_circle = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
-        'Screen w/fovea'),get(hAllAxes,'Title')))).Children(4);
-    F3_circle = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
-        'Screen w/fovea'),get(hAllAxes,'Title')))).Children(5);
+%     F1_circle = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
+%         'Screen w/fovea'),get(hAllAxes,'Title')))).Children(3);
+%     F2_circle = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
+%         'Screen w/fovea'),get(hAllAxes,'Title')))).Children(4);
+%     F3_circle = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
+%         'Screen w/fovea'),get(hAllAxes,'Title')))).Children(5);
     Max_Att_Axis = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
         'Max Attention Activity'),get(hAllAxes,'Title'))));
     Weight_Axis = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
@@ -737,6 +761,8 @@ if visualize || startVisualize
         'Max Saccade Activity'),get(hAllAxes,'Title'))));
     Screen_Display_Axis = hAllAxes(find(cellfun(@(x) strcmp(x.String,...
         'Screen w/fovea'),get(hAllAxes,'Title')))).Children;
+    Screen_Display_Axis = Screen_Display_Axis(3).Parent;
+    
     Raw_Max_Att_Position = Max_Att_Axis.Position; % position of first axes
     Raw_Max_Att_Axis = axes('Position',Raw_Max_Att_Position,'XAxisLocation','top',...
         'YAxisLocation','left',...
@@ -759,7 +785,7 @@ if visualize || startVisualize
     set(hAllAxes(find(cellfun(@(x) strcmp(x.String,'Weight Matrix'),get(hAllAxes,'Title')))),'YLim',[1 featureNum],'XLim',[1 catNum]);
     set(hAllAxes(find(cellfun(@(x) strcmp(x.String,'Category Neurons'),get(hAllAxes,'Title')))),'YLim',[0.5 catNum+0.5]);
     
-    set(F3_circle, 'MarkerFaceColor', [1 1 1], 'MarkerEdgeColor', [1 1 1], 'MarkerSize', 10);hold on
+    % set(F3_circle, 'MarkerFaceColor', [1 1 1], 'MarkerEdgeColor', [1 1 1], 'MarkerSize', 10);hold on
     
     
     
@@ -919,7 +945,7 @@ while state ~= QUIT
                     % first coordinate as vertical. This is why YY and XX are
                     % reversed to what you'd expect in the above line.
                     
-                    if MultipleFeatureLocations % Used in visual search
+                    if VisualSearch % Used in visual search
                         
                         if i<(totalLocations-1) %distractor layers
                             if genSearchArray
@@ -973,6 +999,9 @@ while state ~= QUIT
                     [YY,XX]=meshgrid(-spatialHalfSize:spatialHalfSize);
                     RR=sqrt((stimPos_x(i)-XX).^2 + (stimPos_y(i)-YY).^2);
                     spatialInput=(RR<(fbButtonSize/2));
+                    if VisualSearch
+                        spatialInput=zeros(51,51);
+                    end
                     stimuli_v(:, :, visualLayers) = spatialInput*c_inp_1;
                     stimWeights_v(stimTimes_v(i, 1):stimTimes_v(i, 2), i) = 1;
                     sceneStimActive(stimTimes_v(i, 1):stimTimes_v(i, 2), i) = 1;
@@ -988,7 +1017,7 @@ while state ~= QUIT
             shiftedStimuli_v=zeros(visualFieldSize,visualFieldSize,visualLayers);
             shiftedStimuli_v(slidingVisX,slidingVisY,:)=stimuli_v;
             
-            if SalienceMap
+            if FreeViewing
                 input_vsm_shifted = input_vsm_empty;
                 input_vsm_shifted(slidingVisX,slidingVisY,:) = input_vsm;
             end
@@ -998,6 +1027,9 @@ while state ~= QUIT
             display(['This is trial number ' num2str(trialNum) ' of ' num2str(maxTrials) ' total.'])
         end
         
+        caxis(hAllAxes(find(cellfun(@(x) strcmp(x.String,'Visual Field'),get(hAllAxes,'Title')))),[0 0.1]);
+        caxis(hAllAxes(find(cellfun(@(x) strcmp(x.String,'Spatial Attention Field'),get(hAllAxes,'Title')))),[0 0.1]);
+        caxis(hAllAxes(find(cellfun(@(x) strcmp(x.String,'Saccade Motor Field'),get(hAllAxes,'Title')))),[0 0.1]);
         
         %% 11. START TRIAL
         while state == PLAY &&  trialTimeStep <= tMax
@@ -1046,6 +1078,12 @@ while state ~= QUIT
                 
                 %double click or end of feedback
                 %This is the feedback threshold that ends a trial.
+                
+                if VisualSearch
+                   TrialAccuracy=1;
+                   StimulusRT = TETTime - StimulusOnset;
+                end
+                
             elseif (output_click > advanceTrialThreshold) && trialPhase==4 && ~saccadeInProgress
                 decisionFlag = 1;
                 trialLogger{2,8} = [trialLogger{2,8};trialTimeStep - fbStartTime];
@@ -1077,7 +1115,7 @@ while state ~= QUIT
             end
             
             %This catches bad behaviour and ends the simulation.
-            if trialTimeStep==badTimestepNum || length(trialFixations) >= badFixationNum
+            if trialTimeStep==badTimestepNum || (length(trialFixations) >= badFixationNum)
                 
                 if optimizationModeFlag
                     endFit=NaN;
@@ -1171,7 +1209,7 @@ while state ~= QUIT
                         
                         %% Associative learning
                         % Document reference: \ref{eq:hebbEqs}
-                        % $$\tau \dot w(i,j,t) = -w(i,j,t) + {h_1}$$
+                        % $$\tau \dot wT(i,j,t) = -wT(i,j,t) + {h_1} + associator()$$
                         %
                         
                         wT = associator(wT, tau, deltaT, neurons_f, neurons_c, ...
@@ -1312,7 +1350,7 @@ while state ~= QUIT
                 c_xfbButton_changes = 0;
                 
                 
-                if (output_click > advanceTrialThreshold)
+                if (output_click > advanceTrialThreshold) || (trialTimeStep == tMax)
                     decisionFlag = 1;
                     trialLogger{2,8} = [trialLogger{2,8};trialTimeStep - fbStartTime];
                     trialLogger{2,9} = [trialLogger{2,9};{output_wT - output_wT_old}];
@@ -1390,7 +1428,7 @@ while state ~= QUIT
                 %Without this frame the input to v will be misaligned.
                 shiftedStimuli_v = zeros(visualFieldSize,visualFieldSize,visualLayers);
                 shiftedStimuli_v(slidingVisX,slidingVisY,:) = stimuli_v(1:length(slidingVisX),1:length(slidingVisY),:);
-                if SalienceMap
+                if FreeViewing
                     input_vsm_shifted = input_vsm_empty;
                     input_vsm_shifted(slidingVisX,slidingVisY,:) = input_vsm(1:length(slidingVisX),1:length(slidingVisY),:);
                 end
@@ -1781,7 +1819,7 @@ while state ~= QUIT
             % https://www.mathworks.com/matlabcentral/answers/161540-how-can-i-align-tex-equations-when-using-the-publish-functionality-of-the-matlab-editor
             %
             
-            if SalienceMap
+            if FreeViewing
                 field_v = field_v + (deltaT/tau) * (-field_v + h_v_1 ...
                     + input_vv + input_va + input_vpref + input_vsm_shifted);
             else
@@ -1875,78 +1913,61 @@ while state ~= QUIT
             
             if visualize == 1
                 
-                if fieldModel
-                    set(hPlot_f, 'XData', output_f);
-                    set(hPlot_pref, 'XData', output_pref);
-                    set(hPlot_c, 'XData', output_c);
-                else
-                    set(Ft_Det_Axis, 'YData', output_f);
-                    set(Ft_Exp_Axis, 'YData', output_pref);
-                    set(Category_Neuron_Axis, 'YData', output_c);
-                end
-                % three 2d fields are plotted with transpose so that x is horiz
-                % and y is vert.
+                %linkdata on
+                %refreshdata('gcf')
                 
-                set(Visual_Field_Axis, 'CData', flipud(sum(output_v,3)'));
-                set(Attention_Field_Axis, 'CData', output_a');
-                set(Saccade_Field_Axis, 'CData', output_s');
-                if ~environLoaded
-                    set(Spatial_Gain_Axis, 'CDdata', attPref');
-                end
-                if maxFields
-                    axes(Max_Att_Axis)
-                    cla
-                    axes(Max_Sacc_Axis)
-                    cla
-                    axes(Raw_Max_Sacc_Axis)
-                    cla
-                    axes(Raw_Max_Att_Axis)
-                    cla
-                    
-                    line([1:51],max((field_s')),'Parent',Raw_Max_Sacc_Axis,'Color','k')
-                    line([1:51],max((field_a')),'Parent',Raw_Max_Att_Axis,'Color','k')
-                    
-                    line(Max_Sacc_Axis,[1:51],max(fliplr(output_s')),'Color','b')
-                    line(Max_Att_Axis,[1:51],max(fliplr(output_a')),'Color','b')
-                    %
-                    
-                end
+
                 
-                set(Weight_Axis, 'CData', output_wT');
-                set(F1_circle, 'XData', [stimPos_x(1)], 'YData', [stimPos_y(1)], 'MarkerFaceColor', featureColours(:,1)', 'MarkerEdgeColor', featureColours(:,1)', 'MarkerSize', 10);hold on
-                if size(featureColours,2) >1
-                    set(F2_circle, 'XData', [stimPos_x(2)], 'YData', [stimPos_y(2)], 'MarkerFaceColor', featureColours(:,2)', 'MarkerEdgeColor', featureColours(:,2)', 'MarkerSize', 10);hold on
-                end
-                if size(featureColours,2) >2
-                    set(F3_circle, 'XData', [stimPos_x(3)], 'YData', [stimPos_y(3)], 'MarkerFaceColor', featureColours(:,3)', 'MarkerEdgeColor', featureColours(:,3)', 'MarkerSize', 10);hold on
-                end
-                %In case we're visualizing 4 features.
-                if locationNum == 4
-                    set(Screen_Display_Axis(6),'XData', [stimPos_x(4)], 'YData', [stimPos_y(4)], 'MarkerFaceColor', featureColours(:,4)', 'MarkerEdgeColor', featureColours(:,4)', 'MarkerSize', 10);hold on
-                    %set(Screen_Display_Axis(7), 'YData', [stimPos_y(4)], 'MarkerFaceColor', featureColours(:,4)', 'MarkerEdgeColor', featureColours(:,4)', 'MarkerSize', 10);hold on
-                else
-                    set(Screen_Display_Axis(6), 'XData', [spatialFieldFovea(1)-spatialHalfSize], 'YData', [spatialFieldFovea(2)-spatialHalfSize] , 'MarkerEdgeColor', [0 0 0], 'MarkerSize', 20);
-                end
-                
-                set(Gain_Applied_Axis, 'YData', c_prefgain_9_105*featureValue'); %input_apref
-                
-                
-                set(Trial_Imp_Axis, 'YData', output_imp);
-                set(Motor_Click_Axis, 'YData', output_click);
-                set(Saccade_Neuron_Axis, 'YData', output_r);
-                set(Fixation_Neuron_Axis, 'YData', output_x);
-                set(Gaze_Change_Axis, 'YData', output_g);
-                set(FB_Det_Axis, 'YData', output_fbButton);
-                set(FB_Exp_Axis, 'YData', output_fbButtonExp);
-                
-                set(Trial_Num_Axis,'String', ['Trial = ' num2str(trialNum)])
-                set(Exp_Time_Axis,'String', ['Experiment time (ms) = ' num2str(round(TETTime))])
-                
-                pause(0.02);
+%                 hl_fs = line([1:51],max((field_s')),'Parent',Raw_Max_Sacc_Axis,'Color','k');
+%                 hl_fa = line([1:51],max((field_a')),'Parent',Raw_Max_Att_Axis,'Color','k');
+%                 hl_os = line(Max_Sacc_Axis,[1:51],max(fliplr(output_s')),'Color','b');
+%                 hl_oa = line(Max_Att_Axis,[1:51],max(fliplr(output_a')),'Color','b');
+
+% if trialTimeStep == 1
+%     
+%                 axes(Max_Att_Axis)
+%                 cla
+%                 axes(Max_Sacc_Axis)
+%                 cla
+%                 axes(Raw_Max_Sacc_Axis)
+%                 cla
+%                 axes(Raw_Max_Att_Axis)
+%                 cla
+%     
+%     hl_fs = plot([1:51],max((field_s')),'Parent',Raw_Max_Sacc_Axis,'Color','k');
+%     hl_fa = plot([1:51],max((field_a')),'Parent',Raw_Max_Att_Axis,'Color','k');
+%     hl_os = plot(Max_Sacc_Axis,[1:51],max(fliplr(output_s')),'Color','b');
+%     hl_oa = plot(Max_Att_Axis,[1:51],max(fliplr(output_a')),'Color','b');
+%     
+%     hl_x = [1:51];
+%     
+%     hl_fa.XDataSource = 'hl_x';
+%     hl_oa.XDataSource = 'hl_x';
+%     hl_fs.XDataSource = 'hl_x';
+%     hl_os.XDataSource = 'hl_x';
+%     
+%     
+%     hl_fs_y = max((field_s'));
+%     hl_os_y = max((output_s'));
+%     hl_fa_y = max((field_a'));
+%     hl_oa_y = max((output_a'));
+%     
+%     hl_fa.YDataSource = 'hl_fa_y';
+%     hl_oa.YDataSource = 'hl_oa_y';
+%     hl_fs.YDataSource = 'hl_fs_y';
+%     hl_os.YDataSource = 'hl_os_y';
+%     
+%     
+% else
+%     updateFigure;
+% end
+
+updateFigure;
+
             end
             
             %If the end of the trial is detected...
-            if trialTimeStep == tMax || (MultipleFeatureLocations && (output_c(2) > VisualSearchTargetThreshold))
+            if trialTimeStep == tMax || (VisualSearch && (output_c(2) > CategoryChoiceThreshold))
                 
                 trialFixationsTemp = trialFixations;
                 trialFixationsTemp(trialFixations==1)=LocationRelevance.one;
@@ -1996,7 +2017,9 @@ while state ~= QUIT
                         TrialLvl = [subjectNumber trialNum binaryFeatureValues(LocationRelevance.one) binaryFeatureValues(LocationRelevance.two)	binaryFeatureValues(LocationRelevance.three) CorrectResponse{end} Response	TrialAccuracy	StimulusRT	FeedbackRT	1	FixationOnset	StimulusOnset	ColourOnset	fixCrossInd	fixCrossInd	FeedbackOnset];
                     elseif locationNum ==4
                         TrialLvl = [subjectNumber trialNum binaryFeatureValues(LocationRelevance.one) binaryFeatureValues(LocationRelevance.two)	binaryFeatureValues(LocationRelevance.three) binaryFeatureValues(LocationRelevance.four) CorrectResponse{end} Response	TrialAccuracy	StimulusRT	FeedbackRT	1	FixationOnset	StimulusOnset	ColourOnset	fixCrossInd	fixCrossInd	FeedbackOnset];
-                        
+                    
+                    elseif VisualSearch || FreeViewing
+                        TrialLvl = [subjectNumber trialNum	StimulusRT	FeedbackRT	StimulusOnset	ColourOnset	fixCrossInd	fixCrossInd];
                     else
                         TrialLvl = [subjectNumber trialNum	StimulusRT	FeedbackRT	1	FixationOnset	StimulusOnset	ColourOnset	fixCrossInd	fixCrossInd	FeedbackOnset];
                         
