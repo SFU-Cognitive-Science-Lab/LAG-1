@@ -1083,8 +1083,7 @@ while state ~= QUIT
                    TrialAccuracy=1;
                    StimulusRT = TETTime - StimulusOnset;
                 end
-                
-            elseif (output_click > advanceTrialThreshold) && trialPhase==4 && ~saccadeInProgress
+            elseif ((output_click > advanceTrialThreshold) && trialPhase==4 && ~saccadeInProgress)
                 decisionFlag = 1;
                 trialLogger{2,8} = [trialLogger{2,8};trialTimeStep - fbStartTime];
                 trialLogger{2,9} = [trialLogger{2,9};{output_wT - output_wT_old}];
@@ -1350,7 +1349,7 @@ while state ~= QUIT
                 c_xfbButton_changes = 0;
                 
                 
-                if (output_click > advanceTrialThreshold) || (trialTimeStep == tMax)
+                if (output_click > advanceTrialThreshold)
                     decisionFlag = 1;
                     trialLogger{2,8} = [trialLogger{2,8};trialTimeStep - fbStartTime];
                     trialLogger{2,9} = [trialLogger{2,9};{output_wT - output_wT_old}];
@@ -2036,8 +2035,10 @@ updateFigure;
                 trialLogger{2,10} = [trialLogger{2,10}; {trialFixations'}];
                 if ~feedbackOff
                     trialLogger{2,11} = [trialLogger{2,11}; {deltaT*(saccStartTimes(2:length(trialFixations)+1) - saccEndTimes(1:length(trialFixations)))}];
-                    trialLogger{2,12} = [trialLogger{2,12}; {trialFixationsFB'}];
+                    saccStartTimes = saccStartTimes(1:length(saccEndTimes));
                     trialLogger{2,13} = [trialLogger{2,13}; {deltaT*(saccStartTimes(length(trialFixations)+2:end) - saccEndTimes(length(trialFixations)+1:end-1))}];
+                    trialFixationsFB = trialFixationsFB(1:length(trialLogger{2,13}{end}))
+                    trialLogger{2,12} = [trialLogger{2,12}; {trialFixationsFB'}];
                     trialLogger{2,17} = [trialLogger{2,17}; {deltaT*(saccEndTimes - saccStartTimes)}];
                 else
                     trialLogger{2,11} = [trialLogger{2,11}; {deltaT*(saccStartTimes(2:length(trialFixations)+1) - saccEndTimes(1:length(trialFixations)))}];
@@ -2088,9 +2089,10 @@ updateFigure;
                 trialLogger{2,10} = [trialLogger{2,10}; {trialFixations'}];
                 if ~feedbackOff
                     trialLogger{2,11} = [trialLogger{2,11}; {deltaT*(saccStartTimes(2:length(trialFixations)+1) - saccEndTimes(1:length(trialFixations)))}];
-                    trialLogger{2,12} = [trialLogger{2,12}; {trialFixationsFB'}];
+                    saccStartTimes = saccStartTimes(1:length(saccEndTimes));
                     trialLogger{2,13} = [trialLogger{2,13}; {deltaT*(saccStartTimes(length(trialFixations)+2:end) - saccEndTimes(length(trialFixations)+1:end-1))}];
-                    trialLogger{2,17} = [trialLogger{2,17}; {deltaT*(saccEndTimes - saccStartTimes)}];
+                    trialFixationsFB = trialFixationsFB(1:length(trialLogger{2,13}{end}))
+                    trialLogger{2,12} = [trialLogger{2,12}; {trialFixationsFB'}];                    trialLogger{2,17} = [trialLogger{2,17}; {deltaT*(saccEndTimes - saccStartTimes)}];
                 else
                     trialLogger{2,11} = [trialLogger{2,11}; {deltaT*(saccStartTimes(2:length(trialFixations)+1) - saccEndTimes(1:length(trialFixations)))}];
                     trialLogger{2,12} = [trialLogger{2,12}; {nan}];
